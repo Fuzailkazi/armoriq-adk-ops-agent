@@ -1,0 +1,38 @@
+# Render Blueprint for this repo.
+#
+# In Render: New > Blueprint, point it at this repo.
+#
+# Set the three secrets below when Render prompts for them. They are marked
+# `sync: false` so they are never read from this file — do not commit keys.
+#
+# MCP_URL is the URL of your deployed MCP server, with /mcp on the end. The MCP
+# server lives in a separate repo, so it cannot be wired automatically; paste it
+# in after that service is up.
+
+services:
+  - name: ops-copilot
+    type: web
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: ARMORIQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: MCP_URL
+        sync: false
+
+      # These must match what you register on platform.armoriq.ai.
+      - key: ARMORIQ_AGENT_NAME
+        value: ops-copilot
+      - key: ARMORIQ_MCP_NAME
+        value: ops-mcp
+
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: APPROVAL_WAIT_SECONDS
+        value: "60"
