@@ -9,8 +9,8 @@ This is one half of a pair:
 | Repo | |
 |---|---|
 | **this one** | the ADK agent + the ArmorIQ integration |
-| [`armoriq-adk-ops-mcp`](https://github.com/armoriq/armoriq-adk-ops-mcp) | the MCP server holding the tools |
-| [`armoriq-adk-guide`](https://github.com/armoriq/armoriq-adk-guide) | how to build your own |
+| [`armoriq-adk-ops-mcp`](https://github.com/Fuzailkazi/armoriq-adk-ops-mcp) | the MCP server holding the tools |
+| [`armoriq-adk-guide`](https://github.com/Fuzailkazi/armoriq-adk-guide) | how to build your own |
 
 ---
 
