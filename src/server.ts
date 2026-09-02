@@ -20,7 +20,8 @@ app.use(express.json());
 
 // A minimal browser chat UI for manually testing the agent. Not part of the
 // build-along guide — just a convenience for poking at a deployed agent.
-app.use('/chat', express.static(path.join(__dirname, '../public')));
+// Served at "/" so it's the first thing you see when you open the URL.
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Allows a browser-based frontend (a chat UI, a dashboard) to call this API
 // directly. There's no session/cookie auth here to protect, so an open
