@@ -30,7 +30,7 @@ services:
       - key: ARMORIQ_AGENT_NAME
         value: ops-copilot
       - key: ARMORIQ_MCP_NAME
-        value: ops-mcp
+        value: adk-ops
 
       - key: GEMINI_MODEL
         value: gemini-2.5-flash
