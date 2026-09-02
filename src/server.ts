@@ -6,14 +6,21 @@
  * The `user` field matters: ArmorIQ applies that person's policy, so the same
  * question can be allowed for a manager and held for a tier-1 agent.
  */
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { ask } from './ask.js';
 import { config } from './config.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 8080);
 
 const app = express();
 app.use(express.json());
+
+// A minimal browser chat UI for manually testing the agent. Not part of the
+// build-along guide — just a convenience for poking at a deployed agent.
+app.use('/chat', express.static(path.join(__dirname, '../public')));
 
 // Allows a browser-based frontend (a chat UI, a dashboard) to call this API
 // directly. There's no session/cookie auth here to protect, so an open
