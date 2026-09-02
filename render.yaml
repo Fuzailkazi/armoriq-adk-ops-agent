@@ -36,10 +36,3 @@ services:
         value: gemini-2.5-flash
       - key: APPROVAL_WAIT_SECONDS
         value: "60"
-
-      # TEMPORARY: skips ArmorIQ entirely so the agent runs unguarded while
-      # ops-copilot / adk-ops / policies are still being set up on
-      # platform.armoriq.ai. Remove this once that's done — with it set,
-      # nothing is enforced, including the prompt-injection demo.
-      - key: DISABLE_ARMORIQ
-        value: "1"
