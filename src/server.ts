@@ -35,7 +35,12 @@ app.use((_req, res, next) => {
 app.options('*', (_req, res) => res.sendStatus(204));
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', agent: config.agentName, mcp: config.mcpName });
+  res.json({
+    status: 'ok',
+    agent: config.agentName,
+    mcp: config.mcpName,
+    armoriqDisabled: config.disableArmoriq,
+  });
 });
 
 app.post('/ask', async (req, res) => {
@@ -58,6 +63,23 @@ app.post('/ask', async (req, res) => {
     res.status(500).json({ error: message });
   }
 });
+
+/**
+ * Render's free plan spins a service down after 15 minutes with no inbound
+ * traffic, and the next request hits a cold boot that can 502 at the edge
+ * before the container finishes starting. Self-pinging on an interval
+ * shorter than the idle timeout keeps this service from ever going to sleep.
+ *
+ * RENDER_EXTERNAL_URL is set automatically by Render on deployed services, so
+ * this is a no-op for local runs.
+ */
+const externalUrl = process.env.RENDER_EXTERNAL_URL;
+if (externalUrl) {
+  const PING_INTERVAL_MS = 10 * 60 * 1000;
+  setInterval(() => {
+    fetch(`${externalUrl}/health`).catch(() => {});
+  }, PING_INTERVAL_MS);
+}
 
 app.listen(PORT, () => {
   console.log(`ops-copilot agent listening on http://localhost:${PORT}`);
