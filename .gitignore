@@ -4,3 +4,6 @@ dist/
 .env.local
 *.log
 .DS_Store
+
+# Local testing chat UI — not part of the cookbook, never commit this.
+test-ui/
