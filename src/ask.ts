@@ -34,7 +34,7 @@ import {
   getFunctionResponses,
   isFinalResponse,
 } from '@google/adk';
-import { ArmorIQADK } from '@armoriq/sdk/dist/integrations/google_adk';
+import { ArmorIQADK, ArmorIQADKBundle } from '@armoriq/sdk/dist/integrations/google_adk';
 
 import { config } from './config.js';
 
@@ -95,41 +95,47 @@ export async function ask(question: string, userEmail: string): Promise<AskResul
   // ── Step 3: wrap the run in ArmorIQ ───────────────────────────────────────
   const blocked: string[] = [];
 
-  const armoriq = config.disableArmoriq
-    ? undefined
-    : new ArmorIQADK({
-        apiKey: config.armoriqApiKey,
-        agentName: config.agentName,
-        defaultMcpName: config.mcpName,
-        approvalWaitSeconds: config.approvalWaitSeconds,
-      });
+  // If ArmorIQ is disabled, `armoriq` stays undefined and nothing below runs.
+  let armoriq: ArmorIQADK | undefined;
+  if (!config.disableArmoriq) {
+    armoriq = new ArmorIQADK({
+      apiKey: config.armoriqApiKey,
+      agentName: config.agentName,
+      defaultMcpName: config.mcpName,
+      approvalWaitSeconds: config.approvalWaitSeconds,
+    });
+  }
 
-  // `forUser` binds this run to one person, so policy is applied per user.
-  const scope = await armoriq?.forUser(userEmail, {
-    goal: question,
-    // Optional. ArmorIQ calls this as it makes decisions, so an app can show
-    // "waiting for approval" instead of appearing frozen.
-    onEvent: (kind, payload) => {
-      const tool = String(payload.tool ?? '');
-      if (kind === 'hold') {
-        console.log(`HOLD     ${tool} — waiting for a human to approve`);
-        console.log(`         reason: ${payload.reason}`);
-      } else if (kind === 'approved') {
-        console.log(`APPROVED ${tool} — carrying on`);
-      } else if (kind === 'block') {
-        blocked.push(tool);
-        console.log(`BLOCKED  ${tool}`);
-        console.log(`         reason: ${payload.reason}`);
-      } else if (kind === 'timeout' || kind === 'rejected') {
-        blocked.push(tool);
-        console.log(`REFUSED  ${tool} — approval ${kind}`);
-      }
-    },
-  });
+  // `scope` is only set when ArmorIQ is enabled. Everything below that uses
+  // it is guarded by `if (scope)`.
+  let scope: ArmorIQADKBundle | undefined;
 
-  scope?.install(agent);
+  if (armoriq) {
+    // `forUser` binds this run to one person, so policy is applied per user.
+    scope = await armoriq.forUser(userEmail, {
+      goal: question,
+      // Optional. ArmorIQ calls this as it makes decisions, so an app can show
+      // "waiting for approval" instead of appearing frozen.
+      onEvent: (kind, payload) => {
+        const tool = String(payload.tool ?? '');
+        if (kind === 'hold') {
+          console.log(`HOLD     ${tool} — waiting for a human to approve`);
+          console.log(`         reason: ${payload.reason}`);
+        } else if (kind === 'approved') {
+          console.log(`APPROVED ${tool} — carrying on`);
+        } else if (kind === 'block') {
+          blocked.push(tool);
+          console.log(`BLOCKED  ${tool}`);
+          console.log(`         reason: ${payload.reason}`);
+        } else if (kind === 'timeout' || kind === 'rejected') {
+          blocked.push(tool);
+          console.log(`REFUSED  ${tool} — approval ${kind}`);
+        }
+      },
+    });
 
-  if (!scope) {
+    scope.install(agent);
+  } else {
     console.log('ArmorIQ is NOT installed. Nothing will be checked.\n');
   }
 
@@ -160,15 +166,19 @@ export async function ask(question: string, userEmail: string): Promise<AskResul
       }
 
       if (isFinalResponse(event)) {
-        const parts = event.content?.parts ?? [];
-        const text = parts.map((p) => p.text ?? '').join('');
+        let text = '';
+        if (event.content?.parts) {
+          text = event.content.parts.map((p) => p.text ?? '').join('');
+        }
         if (text.trim()) answer = text.trim();
       }
     }
   } finally {
     // Always clean up, even if the run failed.
-    scope?.uninstall(agent);
-    await scope?.close();
+    if (scope) {
+      scope.uninstall(agent);
+      await scope.close();
+    }
     await toolset.close();
   }
 

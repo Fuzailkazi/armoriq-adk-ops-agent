@@ -7,6 +7,7 @@
  */
 import { ask } from './ask.js';
 import { config } from './config.js';
+import { errorMessage } from './error-message.js';
 
 /** The demo question. Asks for three things, which produce three outcomes. */
 const DEFAULT_QUESTION =
@@ -35,6 +36,6 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  console.error(`\nFailed: ${error instanceof Error ? error.message : String(error)}\n`);
+  console.error(`\nFailed: ${errorMessage(error)}\n`);
   process.exit(1);
 });

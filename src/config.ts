@@ -13,6 +13,28 @@ function required(name: string): string {
   return value;
 }
 
+/**
+ * Where the MCP server is running.
+ *
+ * The MCP server is a separate repo and a separate deployment, so set MCP_URL
+ * to its public URL with /mcp on the end:
+ *
+ *   MCP_URL=https://ops-mcp.onrender.com/mcp
+ *
+ * MCP_HOST is a convenience: if you happen to run both services in the same
+ * Render workspace you can point it at the MCP service and we build the URL
+ * from it. MCP_URL always wins.
+ */
+function resolveMcpUrl(): string {
+  if (process.env.MCP_URL) {
+    return process.env.MCP_URL;
+  }
+  if (process.env.MCP_HOST) {
+    return `https://${process.env.MCP_HOST}/mcp`;
+  }
+  return 'http://localhost:8788/mcp';
+}
+
 export const config = {
   /** Your ArmorIQ API key. Starts with ak_live_ or ak_test_. */
   armoriqApiKey: required('ARMORIQ_API_KEY'),
@@ -23,21 +45,7 @@ export const config = {
   /** The MCP name you registered on platform.armoriq.ai. Must match exactly. */
   mcpName: process.env.ARMORIQ_MCP_NAME ?? 'ops-mcp',
 
-  /**
-   * Where the MCP server is running.
-   *
-   * The MCP server is a separate repo and a separate deployment, so set MCP_URL
-   * to its public URL with /mcp on the end:
-   *
-   *   MCP_URL=https://ops-mcp.onrender.com/mcp
-   *
-   * MCP_HOST is a convenience: if you happen to run both services in the same
-   * Render workspace you can point it at the MCP service and we build the URL
-   * from it. MCP_URL always wins.
-   */
-  mcpUrl:
-    process.env.MCP_URL ??
-    (process.env.MCP_HOST ? `https://${process.env.MCP_HOST}/mcp` : 'http://localhost:8788/mcp'),
+  mcpUrl: resolveMcpUrl(),
 
   /** Which Gemini model to use. */
   model: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash',

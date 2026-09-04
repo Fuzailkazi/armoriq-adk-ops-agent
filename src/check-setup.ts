@@ -11,6 +11,31 @@
  */
 import { ArmorIQClient } from '@armoriq/sdk';
 import { config } from './config.js';
+import { errorMessage } from './error-message.js';
+
+type NamedEntry = { name?: string };
+
+/** Turns [{name:"a"},{name:"b"}] into ["a","b"]. Unnamed entries become "?". */
+function namesOf(entries: NamedEntry[] | undefined): string[] {
+  if (!entries) {
+    return [];
+  }
+  const names: string[] = [];
+  for (const entry of entries) {
+    names.push(entry.name ?? '?');
+  }
+  return names;
+}
+
+/** Pulls the tool list out of the MCP server's response text. */
+function parseToolsList(text: string): Array<{ name: string }> {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) {
+    return [];
+  }
+  const parsed = JSON.parse(match[0]);
+  return parsed.result?.tools ?? [];
+}
 
 async function main() {
   console.log('Checking your setup...\n');
@@ -23,14 +48,13 @@ async function main() {
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} }),
     });
     const text = await response.text();
-    const match = text.match(/\{[\s\S]*\}/);
-    const tools = match ? JSON.parse(match[0]).result?.tools ?? [] : [];
+    const tools = parseToolsList(text);
     console.log(`MCP server:  OK — ${tools.length} tools at ${config.mcpUrl}`);
     for (const tool of tools) console.log(`               ${tool.name}`);
   } catch (error: unknown) {
     console.log(`MCP server:  FAILED — cannot reach ${config.mcpUrl}`);
-    console.log(`               ${error instanceof Error ? error.message : String(error)}`);
-    console.log('               Is the mcp-server running? cd ../mcp-server && npm start');
+    console.log(`               ${errorMessage(error)}`);
+    console.log('               Is the MCP server running? cd ../armoriq-adk-ops-mcp && npm start');
   }
   console.log();
 
@@ -44,9 +68,8 @@ async function main() {
 
   try {
     const account = await client.bootstrap();
-
-    const agentNames: string[] = (account.agents ?? []).map((a: { name?: string }) => a.name ?? '?');
-    const mcpNames: string[] = (account.mcps ?? []).map((m: { name?: string }) => m.name ?? '?');
+    const agentNames = namesOf(account.agents);
+    const mcpNames = namesOf(account.mcps);
 
     console.log(`ArmorIQ:     OK — org "${account.org?.name ?? 'unknown'}"`);
     console.log(`Agents:      ${agentNames.length ? agentNames.join(', ') : 'none registered'}`);
@@ -54,20 +77,21 @@ async function main() {
     console.log();
 
     // The two mismatches that cause "my policies aren't firing".
-    console.log(
-      agentNames.includes(config.agentName)
-        ? `Agent name:  OK — "${config.agentName}" is registered`
-        : `Agent name:  MISMATCH — .env says "${config.agentName}", which is not registered.\n` +
-          `               Register it, or change ARMORIQ_AGENT_NAME to one of the above.`,
-    );
-    console.log(
-      mcpNames.includes(config.mcpName)
-        ? `MCP name:    OK — "${config.mcpName}" is registered`
-        : `MCP name:    MISMATCH — .env says "${config.mcpName}", which is not registered.\n` +
-          `               Register it, or change ARMORIQ_MCP_NAME to one of the above.`,
-    );
+    if (agentNames.includes(config.agentName)) {
+      console.log(`Agent name:  OK — "${config.agentName}" is registered`);
+    } else {
+      console.log(`Agent name:  MISMATCH — .env says "${config.agentName}", which is not registered.`);
+      console.log('               Register it, or change ARMORIQ_AGENT_NAME to one of the above.');
+    }
+
+    if (mcpNames.includes(config.mcpName)) {
+      console.log(`MCP name:    OK — "${config.mcpName}" is registered`);
+    } else {
+      console.log(`MCP name:    MISMATCH — .env says "${config.mcpName}", which is not registered.`);
+      console.log('               Register it, or change ARMORIQ_MCP_NAME to one of the above.');
+    }
   } catch (error: unknown) {
-    console.log(`ArmorIQ:     FAILED — ${error instanceof Error ? error.message : String(error)}`);
+    console.log(`ArmorIQ:     FAILED — ${errorMessage(error)}`);
     console.log('               Check ARMORIQ_API_KEY in .env.');
   }
 
@@ -76,6 +100,6 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : String(error));
+  console.error(errorMessage(error));
   process.exit(1);
 });

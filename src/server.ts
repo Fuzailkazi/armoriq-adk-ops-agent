@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { ask } from './ask.js';
 import { config } from './config.js';
+import { errorMessage } from './error-message.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 8080);
@@ -58,7 +59,7 @@ app.post('/ask', async (req, res) => {
     const result = await ask(question, user);
     res.json(result);
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = errorMessage(error);
     console.error(`/ask failed: ${message}`);
     res.status(500).json({ error: message });
   }
